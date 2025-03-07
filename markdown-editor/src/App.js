@@ -1,61 +1,53 @@
-import React, { useState } from "react";
-import axios from "axios";
-import {
-  Grid2 as Grid,
-  TextField,
-  Typography,
-  Container,
-  Paper,
-} from "@mui/material";
-import ReactMarkdown from "react-markdown";
+import React, { useState, useEffect } from "react";
+import { Box, Container, Typography } from "@mui/material";
+import Grid2 from "@mui/material/Grid2";
+import MarkdownEditor from "./components/MarkdownEditor";
+import MarkdownPreview from "./components/MarkdownPreview";
+import { convertMarkdownToHtml } from "./services/markdownConvertion";
+import useDebounce from "./hooks/useDebounce";
 
 const App = () => {
   const [markdown, setMarkdown] = useState("");
   const [html, setHtml] = useState("");
+  const debouncedMarkdown = useDebounce(markdown, 300);
 
-  const handleMarkdownChange = async (event) => {
-    const text = event.target.value;
-    setMarkdown(text);
+  useEffect(() => {
+    const fetchConvertedMarkdown = async () => {
+      if (debouncedMarkdown.trim() === "") {
+        setHtml("");
+        return;
+      }
+      const convertedHtml = await convertMarkdownToHtml(debouncedMarkdown);
+      setHtml(convertedHtml);
+    };
 
-    try {
-      const response = await axios.post(
-        "http://localhost:5000/convertMarkdown",
-        {
-          markdown: text,
-        }
-      );
-      setHtml(response.data.html);
-    } catch (error) {
-      console.error("Error converting markdown:", error);
-    }
-  };
+    fetchConvertedMarkdown();
+  }, [debouncedMarkdown]);
 
   return (
-    <Container sx={{ mt: 3 }}>
-      <Typography variant="h4" align="center">
-        Markdown Editor with Live Preview
-      </Typography>
-      <Grid container spacing={2}>
-        <Grid size={6}>
-          <Paper sx={{ p: 2, height: "80vh" }}>
-            <Typography variant="h6">Editor</Typography>
-            <TextField
-              fullWidth
-              rows={20}
-              multiline
-              value={markdown}
-              onChange={handleMarkdownChange}
+    <Box sx={{ backgroundColor: "#e3f2fd" }}>
+      <Container sx={{ p: 3, borderRadius: "10px" }}>
+        <Typography
+          variant="h4"
+          align="center"
+          sx={{ mb: 1, fontWeight: "bold", color: "#1565c0" }}
+        >
+          Markdown Editor with Live Preview
+        </Typography>
+
+        <Grid2 container spacing={2}>
+          <Grid2 size={6}>
+            <MarkdownEditor
+              markdown={markdown}
+              onChange={(e) => setMarkdown(e.target.value)}
             />
-          </Paper>
-        </Grid>
-        <Grid size={6}>
-          <Paper sx={{ p: 2, height: "80vh" }}>
-            <Typography variant="h6">Live Preview</Typography>
-            <ReactMarkdown>{markdown}</ReactMarkdown>
-          </Paper>
-        </Grid>
-      </Grid>
-    </Container>
+          </Grid2>
+          <Grid2 size={6}>
+            <MarkdownPreview html={html} />
+          </Grid2>
+        </Grid2>
+      </Container>
+    </Box>
   );
 };
 
